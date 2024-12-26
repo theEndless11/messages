@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Chat App with MongoDB</title>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        #chat-box { border: 1px solid #ccc; padding: 10px; width: 400px; height: 300px; overflow-y: scroll; }
+        #message-input { width: 300px; }
+        button { padding: 5px 10px; margin-left: 5px; }
+        .message { padding: 5px; margin: 5px 0; }
+        .sent { background-color: #e1f7d5; }
+        .received { background-color: #f1f1f1; }
+    </style>
+    <script src="https://cdn.ably.com/lib/ably.min-1.2.0.js"></script>
+</head>
+<body>
+    <h2>Simple Chat App with MongoDB</h2>
+    <div id="chat-box"></div>
+    <input type="text" id="message-input" placeholder="Enter message" onkeydown="checkEnter(event)">
+    <button onclick="sendMessage()">Send</button>
+
+    <script>
+        // Initialize Ably with your API key
+        const ably = new Ably.Realtime({
+            key: 'YqD0zw.8KtRiQ:Mie5VU3mBjnZApvR8OyFPLeIUaknu3Smj-27lmMiYS4',  // Replace with your actual Ably API Key
+            clientId: 'Rootuser-' + Math.floor(Math.random() * 1000)
+        });
+    
+        // Create a channel for public chat
+        const publicChannel = ably.channels.get('chat');
+    
+        // Function to display the messages in the chat box
+        function displayMessages(messages) {
+            console.log('Displaying Messages:', messages);  // Log messages to verify the content
+            const chatBox = document.getElementById('chat-box');
+            chatBox.innerHTML = '';  // Clear previous messages to avoid duplication
+    
+            if (messages.length === 0) {
+                chatBox.innerHTML = 'No messages to display.';  // Show a placeholder if no messages
+                return;
+            }
+    
+            // Display each message
+            messages.forEach((message) => {
+                console.log('Message:', message);  // Add a log for each message object
+                const messageDiv = document.createElement('div');
+                messageDiv.classList.add('message');
+                messageDiv.classList.add('received');  // Customize sender style
+    
+                // Use message.text to display the message
+                messageDiv.innerHTML = `<div>${message.text}</div>`;  
+                chatBox.appendChild(messageDiv);
+            });
+    
+            // Scroll to the bottom of the chat box after messages are displayed
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+    
+        // Function to fetch messages from the backend
+        async function fetchMessages() {
+            try {
+                const response = await fetch('/api/messages');  // Update this to call the serverless function
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('Fetched Messages:', data);  // Fetched messages from DB
+                    displayMessages(data);  // Display messages in the chat box
+                } else {
+                    console.error('Failed to fetch messages:', response.status);
+                }
+            } catch (error) {
+                console.error('Error fetching messages:', error);
+            }
+        }
+        
+        // Fetch and display messages on page load
+        window.onload = () => {
+            console.log('Page loaded, fetching messages...');
+            fetchMessages();
+        };
+    
+        // Subscribe to the Ably channel to receive new messages in real-time
+        publicChannel.subscribe('message', (message) => {
+            const chatBox = document.getElementById('chat-box');
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message');
+            messageDiv.classList.add('received');  // Customize sender style
+            messageDiv.innerHTML = `<div>${message.data.text}</div>`;  // Display new message
+            chatBox.appendChild(messageDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;  // Scroll to the bottom
+        });
+    
+        // Send message to the Ably public channel
+        function sendMessage() {
+            const messageInput = document.getElementById('message-input');
+            const message = messageInput.value.trim();
+            if (message !== '') {
+                publicChannel.publish('message', { text: message });
+                messageInput.value = '';  // Clear the input field after sending
+            }
+        }
+    
+        // Handle Enter key to send messages
+        function checkEnter(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+    </script>
+    
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
